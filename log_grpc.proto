@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package loggRPC;
+option go_package="log-grpc/logpb";
+
+service LogService{
+    rpc SendLogs(stream SendLogsRequest) returns (DummyResult){}
+}
+
+message DummyResult {
+    bool success = 1;
+    string error = 2;
+}
+
+message Log {
+    string time = 1;
+    string level = 2;
+    string msg = 3;
+    string category = 4;
+    string debug_id = 5;
+    string ip = 6;
+    string request_id = 7;
+    string type = 8;
+    string uri = 9;
+    int32 id = 10;
+}
+
+message SendLogsRequest {
+    Log logs = 1;
+}

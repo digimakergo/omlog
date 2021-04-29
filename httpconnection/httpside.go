@@ -4,10 +4,9 @@ import (
 	"database/sql"
 	"net/http"
 
+	m "./dbmanager"
 	"github.com/go-chi/chi"
 	"github.com/qkgo/yin"
-
-	//"github.com/grpc-digimakergo/log-grpc/logpb"
 
 	//"github.com/digimakergo/log-grpc/logpb"
 
@@ -23,7 +22,7 @@ func main() {
 	r.Use(yin.SimpleLogger)
 	r.Get("/posts", func(w http.ResponseWriter, r *http.Request) {
 		res, _ := yin.Event(w, r)
-		items := dbmanager.getAllLogFromDB(db)
+		items := m.getAllLogFromDB(db)
 		res.SendJSON(items)
 	})
 

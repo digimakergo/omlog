@@ -65,7 +65,7 @@ func getLogFromDB(db *sql.DB, id2 int) LogToDB {
 	return LogToDB{}
 }
 
-func getAllLogFromDB(db *sql.DB) LogToDB {
+func GetAllLogFromDB(db *sql.DB) LogToDB {
 	rows, err := db.Query("select * from testTable")
 	checkError(err)
 	for rows.Next() {

@@ -8,6 +8,8 @@ import (
 	"log"
 	"net"
 
+	dbmanager "github.com/digimakergo/omlog/dbmanager"
+
 	//"github.com/grpc-digimakergo/log-grpc/logpb"
 	"logpb"
 
@@ -16,7 +18,6 @@ import (
 	"google.golang.org/grpc"
 
 	//for DB connection
-	"strconv"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -24,7 +25,7 @@ import (
 type server struct{}
 
 func (*server) SendLogs(stream logpb.LogService_SendLogsServer) error {
-	db, _ := sql.Open("sqlite3", "./godb.db")
+	db, _ := sql.Open("sqlite3", "./httpconnection/godb.db")
 	for {
 		req, err := stream.Recv()
 		if err == io.EOF {
@@ -68,7 +69,7 @@ func (*server) SendLogs(stream logpb.LogService_SendLogsServer) error {
 		fmt.Println("-----------------------------------------------------------")
 		fmt.Println("Res.Msg: ", ourLogs.Logs.Msg)
 
-		addLogToDB(db, ourLogs.Logs.Time, ourLogs.Logs.Level, ourLogs.Logs.Msg)
+		dbmanager.AddLogToDB(db, ourLogs.Logs.Time, ourLogs.Logs.Level, ourLogs.Logs.Msg)
 
 		fmt.Println("-----------------------------------------------------------")
 		fmt.Println("-----------------------------------------------------------")
@@ -81,30 +82,33 @@ func (*server) SendLogs(stream logpb.LogService_SendLogsServer) error {
 func main() {
 
 	//DB main func Codes
-	db, _ := sql.Open("sqlite3", "./godb.db")
+	db, err := sql.Open("sqlite3", "./httpconnection/godb.db")
+
+	fmt.Print("Creates new database!")
 	db.Exec(`
+		CREATE TABLE IF NOT EXISTS "testTable" (
+			"id"	INTEGER UNIQUE,
+			"Time"	text,
+			"Level"	text,
+			"Msg"	text,
+			PRIMARY KEY("id" AUTOINCREMENT)
+		);
+		
+		`)
 
-	CREATE TABLE IF NOT EXISTS "testTable" (
-		"id"	INTEGER UNIQUE,
-		"Time"	text,
-		"Level"	text,
-		"Msg"	text,
-		PRIMARY KEY("id" AUTOINCREMENT)
-	);
-	
-	`)
+	/*
+		dbmanager.AddLogToDB(db, "T server ", "T server", "TEST server") // added data to database
 
-	addLogToDB(db, "T TIME ", "T LEVEL", "TEST MSG") // added data to database
+		dbmanager.UpdateLogToDB(db, 2, "U server", "U server", "U server") //update data to database
 
-	updateLogToDB(db, 2, "U TIME", "U LEVEL", "U MSG") //update data to database
+		dbmanager.DeleteLogToDB(db, 1) // delete data to database
 
-	deleteLogToDB(db, 1) // delete data to database
-
-	fmt.Println(getLogFromDB(db, 2)) // printing the Log
-
+		fmt.Println(dbmanager.GetLogFromDB(db, 2)) // printing the Log
+	*/
 	//Port listening here!
 
 	lis, err := net.Listen("tcp", "0.0.0.0:50051")
+
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
@@ -115,66 +119,4 @@ func main() {
 		log.Fatalf("Failed to serve: %v", err)
 	}
 
-}
-
-type LogToDB struct {
-	id    int
-	Time  string
-	Level string
-	Msg   string
-
-	//I created a struct with a struct to select the rows in the table and add data.
-}
-
-func checkError(err error) {
-	if err != nil {
-		panic(err)
-	}
-
-	// catch to error.
-
-}
-
-func addLogToDB(db *sql.DB, Time string, Level string, Msg string) {
-	tx, _ := db.Begin()
-	stmt, _ := tx.Prepare("insert into testTable (Time,Level,Msg) values (?,?,?)")
-	_, err := stmt.Exec(Time, Level, Msg)
-	checkError(err)
-	tx.Commit()
-}
-
-func getLogFromDB(db *sql.DB, id2 int) LogToDB {
-	rows, err := db.Query("select * from testTable")
-	checkError(err)
-	for rows.Next() {
-		var tempLogToDB LogToDB
-		err =
-			rows.Scan(&tempLogToDB.id, &tempLogToDB.Time, &tempLogToDB.Level, &tempLogToDB.Msg)
-		checkError(err)
-		if tempLogToDB.id == id2 {
-			return tempLogToDB
-		}
-
-	}
-	return LogToDB{}
-}
-
-func updateLogToDB(db *sql.DB, id2 int, Time string, Level string, Msg string) {
-	sid := strconv.Itoa(id2) // int to string
-	tx, _ := db.Begin()
-
-	stmt, _ := tx.Prepare("update testTable set Time=?,Level=?,Msg=? where id=?")
-	_, err := stmt.Exec(Time, Level, Msg, sid)
-	checkError(err)
-	tx.Commit()
-}
-
-func deleteLogToDB(db *sql.DB, id2 int) {
-	sid := strconv.Itoa(id2) // int to string
-	tx, _ := db.Begin()
-
-	stmt, _ := tx.Prepare("delete from testTable where id=?")
-	_, err := stmt.Exec(sid)
-	checkError(err)
-	tx.Commit()
 }

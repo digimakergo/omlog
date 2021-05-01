@@ -7,7 +7,7 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/qkgo/yin"
 
-	"github.com/digimakergo/omlog/httpconnection/dbmanager"
+	dbmanager "github.com/digimakergo/omlog/dbmanager"
 
 	//for DB connection
 
@@ -26,6 +26,19 @@ func main() {
 	})
 
 	r.Post("/posts", func(w http.ResponseWriter, r *http.Request) {
+		res, req := yin.Event(w, r)
+		body := map[string]string{}
+		req.BindBody(&body)
+		res.SendStatus(204)
+	})
+
+	r.Get("/getone", func(w http.ResponseWriter, r *http.Request) {
+		res, _ := yin.Event(w, r)
+		items := dbmanager.GetLogFromDB(db, 1)
+		res.SendJSON(items)
+	})
+
+	r.Post("/getone", func(w http.ResponseWriter, r *http.Request) {
 		res, req := yin.Event(w, r)
 		body := map[string]string{}
 		req.BindBody(&body)

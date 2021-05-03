@@ -8,7 +8,7 @@ import (
 	"log"
 	"net"
 
-	dbmanager "github.com/digimakergo/omlog/dbmanager"
+	//	dbmanager "github.com/digimakergo/omlog/dbmanager"
 
 	//"github.com/grpc-digimakergo/log-grpc/logpb"
 	"logpb"
@@ -70,7 +70,7 @@ func (*server) SendLogs(stream logpb.LogService_SendLogsServer) error {
 		fmt.Println("-----------------------------------------------------------")
 		fmt.Println("Res.Msg: ", ourLogs.Logs.Msg)
 
-		dbmanager.AddLogToDB(db, ourLogs.Logs.Time, ourLogs.Logs.Level, ourLogs.Logs.Msg)
+		AddLogToDB(db, ourLogs.Logs.Time, ourLogs.Logs.Level, ourLogs.Logs.Msg)
 
 		fmt.Println("-----------------------------------------------------------")
 		fmt.Println("-----------------------------------------------------------")
@@ -97,15 +97,6 @@ func main() {
 		
 		`)
 
-	/*
-		dbmanager.AddLogToDB(db, "T server ", "T server", "TEST server") // added data to database
-
-		dbmanager.UpdateLogToDB(db, 2, "U server", "U server", "U server") //update data to database
-
-		dbmanager.DeleteLogToDB(db, 1) // delete data to database
-
-		fmt.Println(dbmanager.GetLogFromDB(db, 2)) // printing the Log
-	*/
 	//Port listening here!
 
 	lis, err := net.Listen("tcp", "0.0.0.0:50051")
@@ -120,4 +111,21 @@ func main() {
 		log.Fatalf("Failed to serve: %v", err)
 	}
 
+}
+
+func CheckError(err error) {
+	if err != nil {
+		fmt.Print("ERROR IN SERVER.GO !")
+		panic(err)
+	}
+
+	// catch to error.
+}
+
+func AddLogToDB(db *sql.DB, Time string, Level string, Msg string) {
+	tx, _ := db.Begin()
+	stmt, _ := tx.Prepare("insert into testTable (Time,Level,Msg) values (?,?,?)")
+	_, err := stmt.Exec(Time, Level, Msg)
+	CheckError(err)
+	tx.Commit()
 }

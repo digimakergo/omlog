@@ -14,6 +14,18 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+type LogToDB struct {
+	id    int
+	Time  string
+	Level string
+	Msg   string
+
+	//I created a struct with a struct to select the rows in the table and add data.
+}
+
+// All logs returns in an array
+type AllLogs []LogToDB
+
 //DB CRUD Codes here!
 func AddLogToDB(db *sql.DB, Time string, Level string, Msg string) {
 	tx, _ := db.Begin()
@@ -39,18 +51,19 @@ func GetLogFromDB(db *sql.DB, id2 int) LogToDB {
 	return LogToDB{}
 }
 
-func GetAllLogFromDB(db *sql.DB) LogToDB {
+func GetAllLogFromDB(db *sql.DB) []LogToDB {
 	rows, err := db.Query("select * from testTable")
 	CheckError(err)
+	var allLogs AllLogs
 	for rows.Next() {
 		var tempLogToDB LogToDB
-		err =
-			rows.Scan(&tempLogToDB.id, &tempLogToDB.Time, &tempLogToDB.Level, &tempLogToDB.Msg)
+		err = rows.Scan(&tempLogToDB.id, &tempLogToDB.Time, &tempLogToDB.Level, &tempLogToDB.Msg)
 		CheckError(err)
-
-		return tempLogToDB
+		allLogs = append(allLogs, tempLogToDB)
+		fmt.Println(allLogs)
+		return allLogs
 	}
-	return LogToDB{}
+	return []LogToDB{}
 }
 
 func UpdateLogToDB(db *sql.DB, id2 int, Time string, Level string, Msg string) {
@@ -71,15 +84,6 @@ func DeleteLogToDB(db *sql.DB, id2 int) {
 	_, err := stmt.Exec(sid)
 	CheckError(err)
 	tx.Commit()
-}
-
-type LogToDB struct {
-	id    int
-	Time  string
-	Level string
-	Msg   string
-
-	//I created a struct with a struct to select the rows in the table and add data.
 }
 
 func CheckError(err error) {

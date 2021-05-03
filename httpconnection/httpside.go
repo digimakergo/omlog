@@ -19,13 +19,13 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(yin.SimpleLogger)
-	r.Get("/posts", func(w http.ResponseWriter, r *http.Request) {
+	r.Get("/getall", func(w http.ResponseWriter, r *http.Request) {
 		res, _ := yin.Event(w, r)
 		items := dbmanager.GetAllLogFromDB(db)
 		res.SendJSON(items)
 	})
 
-	r.Post("/posts", func(w http.ResponseWriter, r *http.Request) {
+	r.Post("/getall", func(w http.ResponseWriter, r *http.Request) {
 		res, req := yin.Event(w, r)
 		body := map[string]string{}
 		req.BindBody(&body)

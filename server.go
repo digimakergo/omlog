@@ -43,6 +43,7 @@ func (*server) SendLogs(stream logpb.LogService_SendLogsServer) error {
 		// Convert stream data to String and read as JSON
 
 		result, _ := json.Marshal(req)
+
 		type LogJSON struct {
 			Time  string
 			Level string

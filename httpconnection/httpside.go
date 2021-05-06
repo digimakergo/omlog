@@ -49,7 +49,12 @@ type Logs []Log
 
 var mainDB *sql.DB
 
+func enableCors(w *http.ResponseWriter) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+}
+
 func getAll(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	rows, err := mainDB.Query("SELECT * FROM testTable")
 	checkErr(err)
 	var logs Logs
@@ -65,6 +70,7 @@ func getAll(w http.ResponseWriter, r *http.Request) {
 }
 
 func getByID(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	id := r.URL.Query().Get(":id")
 	stmt, err := mainDB.Prepare(" SELECT * FROM testTable where id = ?")
 	checkErr(err)
@@ -81,6 +87,7 @@ func getByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func insert(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	time := r.FormValue("time")
 	level := r.FormValue("level")
 	msg := r.FormValue("msg")
@@ -103,6 +110,7 @@ func insert(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateByID(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	time := r.FormValue("time")
 	level := r.FormValue("level")
 	msg := r.FormValue("msg")
@@ -132,6 +140,7 @@ func updateByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteByID(w http.ResponseWriter, r *http.Request) {
+	enableCors(&w)
 	id := r.URL.Query().Get(":id")
 	stmt, err := mainDB.Prepare("DELETE FROM testTable WHERE id = ?")
 	checkErr(err)

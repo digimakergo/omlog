@@ -28,6 +28,7 @@ func (*server) SendLogs(stream logpb.LogService_SendLogsServer) error {
 	db, _ := sql.Open("sqlite3", "./httpconnection/godb.db")
 	for {
 		req, err := stream.Recv()
+
 		if err == io.EOF {
 			//Finished reading client stream
 			return stream.SendAndClose(&logpb.DummyResult{

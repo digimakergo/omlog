@@ -36,12 +36,18 @@ func main() {
 	}
 }
 
+//estTable (Time,Level,Msg,Category,DebugId,Ip,RequestId,Type,Uri) values (?,?,?,?,?,?,?,?,?)
 type Log struct {
-	ID    int64  `json:"id"`
-	Time  string `json:"time"`
-	Level string `json:"level"`
-	Msg   string `json:"msg"`
-
+	ID        int64  `json:"id"`
+	Time      string `json:"time"`
+	Level     string `json:"level"`
+	Msg       string `json:"msg"`
+	Category  string `json:"category"`
+	DebugId   string `json:"debugId"`
+	Ip        string `json:"Ip"`
+	RequestId string `json:"RequestId"`
+	Type      string `json:"Type"`
+	Uri       string `json:"Uri"`
 	//I created a struct with a struct to select the rows in the table and add data.
 }
 
@@ -60,7 +66,7 @@ func getAll(w http.ResponseWriter, r *http.Request) {
 	var logs Logs
 	for rows.Next() {
 		var log Log
-		err = rows.Scan(&log.ID, &log.Time, &log.Level, &log.Msg)
+		err = rows.Scan(&log.ID, &log.Time, &log.Level, &log.Msg, &log.Category, &log.DebugId, &log.Ip, &log.RequestId, &log.Type, &log.Uri)
 		checkErr(err)
 		logs = append(logs, log)
 	}
@@ -78,7 +84,7 @@ func getByID(w http.ResponseWriter, r *http.Request) {
 	checkErr(errQuery)
 	var log Log
 	for rows.Next() {
-		err = rows.Scan(&log.ID, &log.Time, &log.Level, &log.Msg)
+		err = rows.Scan(&log.ID, &log.Time, &log.Level, &log.Msg, &log.Category, &log.DebugId, &log.Ip, &log.RequestId, &log.Type, &log.Uri)
 		checkErr(err)
 	}
 	jsonB, errMarshal := json.Marshal(log)
@@ -91,15 +97,27 @@ func insert(w http.ResponseWriter, r *http.Request) {
 	time := r.FormValue("time")
 	level := r.FormValue("level")
 	msg := r.FormValue("msg")
+	category := r.FormValue("category")
+	debugid := r.FormValue("debugid")
+	ip := r.FormValue("ip")
+	requestid := r.FormValue("requestid")
+	Type := r.FormValue("type")
+	uri := r.FormValue("uri")
 
 	var log Log
 	log.Time = time
 	log.Level = level
 	log.Msg = msg
+	log.Category = category
+	log.DebugId = debugid
+	log.Ip = ip
+	log.RequestId = requestid
+	log.Type = Type
+	log.Uri = uri
 
-	stmt, err := mainDB.Prepare("INSERT INTO testTable(time, level, msg) values (?, ?, ?)")
+	stmt, err := mainDB.Prepare("INSERT INTO testTable (Time,Level,Msg,Category,DebugId,Ip,RequestId,Type,Uri) values (?,?,?,?,?,?,?,?,?)")
 	checkErr(err)
-	result, errExec := stmt.Exec(log.Time, log.Level, log.Msg)
+	result, errExec := stmt.Exec(log.Time, log.Level, log.Msg, log.Category, log.DebugId, log.Ip, log.RequestId, log.Type, log.Uri)
 	checkErr(errExec)
 	newID, errLast := result.LastInsertId()
 	checkErr(errLast)
@@ -114,6 +132,12 @@ func updateByID(w http.ResponseWriter, r *http.Request) {
 	time := r.FormValue("time")
 	level := r.FormValue("level")
 	msg := r.FormValue("msg")
+	category := r.FormValue("category")
+	debugid := r.FormValue("debugid")
+	ip := r.FormValue("ip")
+	requestid := r.FormValue("requestid")
+	Type := r.FormValue("type")
+	uri := r.FormValue("uri")
 
 	id := r.URL.Query().Get(":id")
 	var log Log
@@ -122,10 +146,16 @@ func updateByID(w http.ResponseWriter, r *http.Request) {
 	log.Time = time
 	log.Level = level
 	log.Msg = msg
+	log.Category = category
+	log.DebugId = debugid
+	log.Ip = ip
+	log.RequestId = requestid
+	log.Type = Type
+	log.Uri = uri
 
-	stmt, err := mainDB.Prepare("UPDATE testTable SET time = ? SET level = ? SET msg = ?  WHERE id = ?")
+	stmt, err := mainDB.Prepare("UPDATE testTable SET time = ? SET level = ? SET msg = ? SET category = ? SET debugid = ? SET ip = ? SET requestid = ? SET Type = ? SET uri = ? WHERE id = ?")
 	checkErr(err)
-	result, errExec := stmt.Exec(log.Time, log.Level, log.Msg, log.ID)
+	result, errExec := stmt.Exec(log.Time, log.Level, log.Msg, log.Category, log.DebugId, log.Ip, log.RequestId, log.Type, log.Uri, log.ID)
 	checkErr(errExec)
 	rowAffected, errLast := result.RowsAffected()
 	checkErr(errLast)

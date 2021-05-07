@@ -1,4 +1,4 @@
-package main
+package log
 
 import (
 	"database/sql"
@@ -8,10 +8,7 @@ import (
 	"log"
 	"net"
 
-	//"github.com/grpc-digimakergo/log-grpc/logpb"
-	"logpb"
-
-	//"github.com/digimakergo/log-grpc/logpb"
+	logpb "/log-grpc/logpb/log_grpc.pb.go"
 
 	"google.golang.org/grpc"
 

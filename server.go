@@ -1,4 +1,4 @@
-package log
+package main
 
 import (
 	"database/sql"
@@ -7,17 +7,14 @@ import (
 	"io"
 	"log"
 	"net"
+	"net/http"
+	"time"
 
-<<<<<<< HEAD
-	logpb "/log-grpc/logpb/log_grpc.pb.go"
-=======
-	//	dbmanager "github.com/digimakergo/omlog/dbmanager"
+	"github.com/gorilla/websocket"
 
-	//"github.com/grpc-digimakergo/log-grpc/logpb"
-	"logpb"
+	logpb "logpb" //"github.com/digimakergo/omlog/log-grpc/logpb/log_grpc.pb.go"
 
 	//"github.com/digimakergo/log-grpc/logpb"
->>>>>>> 84c00348de36ce8dd873085b74d6cf44f44dd219
 
 	"google.golang.org/grpc"
 
@@ -28,11 +25,50 @@ import (
 
 type server struct{}
 
+type LogJSON struct {
+	Time      string
+	Level     string
+	Msg       string
+	Category  string
+	DebugId   string
+	Ip        string
+	RequestId string
+	Type      string
+	Uri       string
+}
+
+type LogMain struct {
+	Logs LogJSON
+}
+
+var (
+	websocketConnections = make(map[*websocket.Conn]time.Time)
+	upgrader             = websocket.Upgrader{
+		ReadBufferSize:  4096,
+		WriteBufferSize: 4096,
+	}
+	// Time allowed to write a message to the peer.
+	writeWait = 10 * time.Second
+	// Time allowed to read the next pong message from the peer.
+	pongWait = 60 * time.Second
+)
+
+func websocketHandler(w http.ResponseWriter, r *http.Request) {
+	con, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	websocketConnections[con] = time.Now()
+	con.SetReadDeadline(time.Now().Add(pongWait))
+	con.SetPongHandler(func(string) error { con.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+}
+
 func (*server) SendLogs(stream logpb.LogService_SendLogsServer) error {
 	db, _ := sql.Open("sqlite3", "./httpconnection/godb.db")
 	for {
 		req, err := stream.Recv()
-
 		if err == io.EOF {
 			//Finished reading client stream
 			return stream.SendAndClose(&logpb.DummyResult{
@@ -46,19 +82,7 @@ func (*server) SendLogs(stream logpb.LogService_SendLogsServer) error {
 		}
 
 		// Convert stream data to String and read as JSON
-
 		result, _ := json.Marshal(req)
-
-		type LogJSON struct {
-			Time  string
-			Level string
-			Msg   string
-			//and the others! // TODO
-		}
-
-		type LogMain struct {
-			Logs LogJSON
-		}
 
 		str := string(result)
 		var ourLogs LogMain
@@ -74,12 +98,37 @@ func (*server) SendLogs(stream logpb.LogService_SendLogsServer) error {
 		fmt.Println("Res.Level: ", ourLogs.Logs.Level)
 		fmt.Println("-----------------------------------------------------------")
 		fmt.Println("Res.Msg: ", ourLogs.Logs.Msg)
+		fmt.Println("-----------------------------------------------------------")
+		fmt.Println("Res.Category: ", ourLogs.Logs.Category)
+		fmt.Println("-----------------------------------------------------------")
+		fmt.Println("Res.DebugId: ", ourLogs.Logs.DebugId)
+		fmt.Println("-----------------------------------------------------------")
+		fmt.Println("Res.Ip: ", ourLogs.Logs.Ip)
+		fmt.Println("-----------------------------------------------------------")
+		fmt.Println("Res.RequestId: ", ourLogs.Logs.RequestId)
+		fmt.Println("-----------------------------------------------------------")
+		fmt.Println("Res.Type: ", ourLogs.Logs.Type)
+		fmt.Println("-----------------------------------------------------------")
+		fmt.Println("Res.Uri: ", ourLogs.Logs.Uri)
 
-		AddLogToDB(db, ourLogs.Logs.Time, ourLogs.Logs.Level, ourLogs.Logs.Msg)
+		if ourLogs.Logs.Level != "debug" {
+			AddLogToDB(db, ourLogs.Logs.Time, ourLogs.Logs.Level, ourLogs.Logs.Msg, ourLogs.Logs.Category, ourLogs.Logs.DebugId, ourLogs.Logs.Ip, ourLogs.Logs.RequestId, ourLogs.Logs.Type, ourLogs.Logs.Uri)
+		} else {
+			go sendLogsToWebsocketConnections(ourLogs)
+		}
 
 		fmt.Println("-----------------------------------------------------------")
 		fmt.Println("-----------------------------------------------------------")
+	}
+}
 
+func sendLogsToWebsocketConnections(ourLogs LogMain) {
+	for websocketConnection, _ := range websocketConnections {
+		websocketConnection.SetWriteDeadline(time.Now().Add(writeWait))
+		if err := websocketConnection.WriteJSON(ourLogs); err != nil {
+			log.Println("Error sending to via websocket:  ", err)
+			delete(websocketConnections, websocketConnection)
+		}
 	}
 }
 
@@ -88,19 +137,24 @@ func (*server) SendLogs(stream logpb.LogService_SendLogsServer) error {
 func main() {
 
 	//DB main func Codes
-	db, err := sql.Open("sqlite3", "./httpconnection/godb.db")
-
-	fmt.Print("Creates new database!")
+	db, _ := sql.Open("sqlite3", "./godb.db")
 	db.Exec(`
-		CREATE TABLE IF NOT EXISTS "testTable" (
-			"id"	INTEGER UNIQUE,
-			"Time"	text,
-			"Level"	text,
-			"Msg"	text,
-			PRIMARY KEY("id" AUTOINCREMENT)
-		);
+	CREATE TABLE IF NOT EXISTS "testTable" (
+		"id"	INTEGER UNIQUE,
+		"Time"	text,
+		"Level"	text,
+		"Msg"	text,
+		"Category" text,
+		"DebugId" text,
+		"Ip" text,
+		"RequestId" text,
+		"Type" text,
+		"Uri" text,
 		
-		`)
+		PRIMARY KEY("id" AUTOINCREMENT)
+	);
+	
+	`)
 
 	//Port listening here!
 
@@ -116,6 +170,22 @@ func main() {
 		log.Fatalf("Failed to serve: %v", err)
 	}
 
+	http.HandleFunc("/ws/debug-logs", websocketHandler)
+	log.Fatal(http.ListenAndServe("0.0.0.0:50052", nil))
+}
+
+type LogToDB struct {
+	Time      string
+	Level     string
+	Msg       string
+	Category  string
+	DebugId   string
+	Ip        string
+	RequestId string
+	Type      string
+	Uri       string
+
+	//I created a struct with a struct to select the rows in the table and add data.
 }
 
 func CheckError(err error) {
@@ -127,10 +197,11 @@ func CheckError(err error) {
 	// catch to error.
 }
 
-func AddLogToDB(db *sql.DB, Time string, Level string, Msg string) {
+func AddLogToDB(db *sql.DB, Time string, Level string, Msg string, Category string, DebugId string, Ip string, RequestId string, Type string, Uri string) {
 	tx, _ := db.Begin()
-	stmt, _ := tx.Prepare("insert into testTable (Time,Level,Msg) values (?,?,?)")
-	_, err := stmt.Exec(Time, Level, Msg)
+	stmt, _ := tx.Prepare("insert into testTable (Time,Level,Msg,Category,DebugId,Ip,RequestId,Type,Uri) values (?,?,?,?,?,?,?,?,?)")
+	_, err := stmt.Exec(Time, Level, Msg, Category, DebugId, Ip, RequestId, Type, Uri)
 	CheckError(err)
 	tx.Commit()
 }
+>>>>>>> 619357b3bb4ab6e4577e104a8a09e09c1dfa3e3f

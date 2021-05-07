@@ -4,6 +4,7 @@ package log
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/digimakergo/digimaker/core/log/log-grpc/logpb"
@@ -44,6 +45,39 @@ func (hook *RemoteHook) Fire(entry *log.Entry) error {
 // Levels define on which log levels this hook would trigger
 func (hook *RemoteHook) Levels() []log.Level {
 	return log.AllLevels
+}
+
+func SendWS(entry *log.Entry) []byte {
+
+	logFields := entry.Data
+	category := ""
+
+	if logFields["category"] != nil {
+		category = logFields["category"].(string)
+	}
+
+	logEntry := &logpb.Log{
+		Time:      entry.Time.String(),
+		Level:     entry.Level.String(),
+		Msg:       entry.Message,
+		Category:  category,
+		DebugId:   logFields["debug_id"].(string),
+		Ip:        logFields["ip"].(string),
+		RequestId: logFields["request_id"].(string),
+		Type:      logFields["type"].(string),
+		Uri:       logFields["uri"].(string),
+		Id:        1,
+	}
+
+	logs := []*logpb.Log{logEntry}
+	logarray := []*logpb.SendLogsRequest{
+		&logpb.SendLogsRequest{
+			Logs: logs,
+		},
+	}
+
+	result, _ := json.Marshal(logarray)
+	return result
 }
 
 func (*Client) SendWithgRPC(entry *log.Entry) error {

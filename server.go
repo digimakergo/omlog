@@ -12,7 +12,7 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	logpb "logpb" //"github.com/digimakergo/omlog/log-grpc/logpb/log_grpc.pb.go"
+	"github.com/digimakergo/omlog/log-grpc/logpb"
 
 	//"github.com/digimakergo/log-grpc/logpb"
 

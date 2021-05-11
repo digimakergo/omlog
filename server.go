@@ -204,4 +204,3 @@ func AddLogToDB(db *sql.DB, Time string, Level string, Msg string, Category stri
 	CheckError(err)
 	tx.Commit()
 }
->>>>>>> 619357b3bb4ab6e4577e104a8a09e09c1dfa3e3f

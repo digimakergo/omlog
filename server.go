@@ -172,7 +172,7 @@ func main() {
 	}
 
 	http.HandleFunc("/ws/debug-logs", websocketHandler)
-	log.Fatal(http.ListenAndServe("0.0.0.0:50052", nil))
+	log.Fatal(http.ListenAndServe(":50052", nil))
 }
 
 type LogToDB struct {

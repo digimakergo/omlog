@@ -55,7 +55,7 @@ var (
 )
 
 func websocketHandler(w http.ResponseWriter, r *http.Request) {
-	con, err := upgrader.Upgrade(w, r, nil)
+	con, err := upgrader.Upgrade(w, r, w.Header())
 	if err != nil {
 		log.Println(err)
 		return
@@ -124,18 +124,27 @@ func (*server) SendLogs(stream logpb.LogService_SendLogsServer) error {
 }
 
 func sendLogsToWebsocketConnections(ourLogs LogMain) {
+	fmt.Println("IN SENDLOGS")
 	for websocketConnection, _ := range websocketConnections {
 		websocketConnection.SetWriteDeadline(time.Now().Add(writeWait))
 		if err := websocketConnection.WriteJSON(ourLogs); err != nil {
-			log.Println("Error sending to via websocket:  ", err)
+			fmt.Println("Error sending to via websocket:  ", err)
 			delete(websocketConnections, websocketConnection)
 		}
 	}
 }
 
+func setuproutes() {
+	http.HandleFunc("/ws/debug-logs", websocketHandler)
+}
+
 //DB CRUD Codes here!
 
 func main() {
+
+	fmt.Printf("Server started at: %v", time.Now())
+	setuproutes()
+	go http.ListenAndServe(":6001", nil)
 
 	//DB main func Codes
 	db, _ := sql.Open("sqlite3", "./godb.db")
@@ -171,8 +180,6 @@ func main() {
 		log.Fatalf("Failed to serve: %v", err)
 	}
 
-	http.HandleFunc("/ws/debug-logs", websocketHandler)
-	log.Fatal(http.ListenAndServe(":50052", nil))
 }
 
 type LogToDB struct {

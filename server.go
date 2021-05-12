@@ -46,6 +46,7 @@ var (
 	upgrader             = websocket.Upgrader{
 		ReadBufferSize:  4096,
 		WriteBufferSize: 4096,
+		CheckOrigin:     func(r *http.Request) bool { return true },
 	}
 	// Time allowed to write a message to the peer.
 	writeWait = 10 * time.Second

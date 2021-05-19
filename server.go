@@ -35,6 +35,7 @@ type LogJSON struct {
 	RequestId string
 	Type      string
 	Uri       string
+	UserId    int32
 }
 
 type LogMain struct {
@@ -111,9 +112,11 @@ func (*server) SendLogs(stream logpb.LogService_SendLogsServer) error {
 		fmt.Println("Res.Type: ", ourLogs.Logs.Type)
 		fmt.Println("-----------------------------------------------------------")
 		fmt.Println("Res.Uri: ", ourLogs.Logs.Uri)
+		fmt.Println("-----------------------------------------------------------")
+		fmt.Println("Res.UserId: ", ourLogs.Logs.UserId)
 
 		if ourLogs.Logs.Level != "debug" {
-			AddLogToDB(db, ourLogs.Logs.Time, ourLogs.Logs.Level, ourLogs.Logs.Msg, ourLogs.Logs.Category, ourLogs.Logs.DebugId, ourLogs.Logs.Ip, ourLogs.Logs.RequestId, ourLogs.Logs.Type, ourLogs.Logs.Uri)
+			AddLogToDB(db, ourLogs.Logs.Time, ourLogs.Logs.Level, ourLogs.Logs.Msg, ourLogs.Logs.Category, ourLogs.Logs.DebugId, ourLogs.Logs.Ip, ourLogs.Logs.RequestId, ourLogs.Logs.Type, ourLogs.Logs.Uri, ourLogs.Logs.UserId)
 		} else {
 			go sendLogsToWebsocketConnections(ourLogs)
 		}
@@ -147,7 +150,7 @@ func main() {
 	go http.ListenAndServe(":6001", nil)
 
 	//DB main func Codes
-	db, _ := sql.Open("sqlite3", "./godb.db")
+	db, _ := sql.Open("sqlite3", "./httpconnection/godb.db")
 	db.Exec(`
 	CREATE TABLE IF NOT EXISTS "testTable" (
 		"id"	INTEGER UNIQUE,
@@ -160,7 +163,7 @@ func main() {
 		"RequestId" text,
 		"Type" text,
 		"Uri" text,
-		
+		"UserId" INT,
 		PRIMARY KEY("id" AUTOINCREMENT)
 	);
 	
@@ -192,7 +195,7 @@ type LogToDB struct {
 	RequestId string
 	Type      string
 	Uri       string
-
+	UserId    int32
 	//I created a struct with a struct to select the rows in the table and add data.
 }
 
@@ -205,10 +208,10 @@ func CheckError(err error) {
 	// catch to error.
 }
 
-func AddLogToDB(db *sql.DB, Time string, Level string, Msg string, Category string, DebugId string, Ip string, RequestId string, Type string, Uri string) {
+func AddLogToDB(db *sql.DB, Time string, Level string, Msg string, Category string, DebugId string, Ip string, RequestId string, Type string, Uri string, UserId int32) {
 	tx, _ := db.Begin()
-	stmt, _ := tx.Prepare("insert into testTable (Time,Level,Msg,Category,DebugId,Ip,RequestId,Type,Uri) values (?,?,?,?,?,?,?,?,?)")
-	_, err := stmt.Exec(Time, Level, Msg, Category, DebugId, Ip, RequestId, Type, Uri)
+	stmt, _ := tx.Prepare("insert into testTable (Time,Level,Msg,Category,DebugId,Ip,RequestId,Type,Uri,UserId) values (?,?,?,?,?,?,?,?,?,?)")
+	_, err := stmt.Exec(Time, Level, Msg, Category, DebugId, Ip, RequestId, Type, Uri, UserId)
 	CheckError(err)
 	tx.Commit()
 }

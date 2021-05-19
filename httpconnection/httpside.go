@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/bmizerany/pat"
 	_ "github.com/mattn/go-sqlite3"
@@ -16,17 +15,19 @@ import (
 
 func main() {
 
-	db, errOpenDB := sql.Open("sqlite3", "godb.db")
+	db, errOpenDB := sql.Open("sqlite3", "./godb.db")
 	checkErr(errOpenDB)
 	mainDB = db
 
 	r := pat.New()
-	r.Del("/logs/:id", http.HandlerFunc(deleteByID))
+	//r.Del("/logs/:id", http.HandlerFunc(deleteByID))
 	r.Get("/logs/:id", http.HandlerFunc(getByID))
-	r.Put("/logs/:id", http.HandlerFunc(updateByID))
+	//r.Put("/logs/:id", http.HandlerFunc(updateByID))
 	r.Get("/logs", http.HandlerFunc(getAll))
-	r.Post("/logs", http.HandlerFunc(insert))
-
+	//r.Post("/logs", http.HandlerFunc(insert))
+	r.Get("/logs/level/:level", http.HandlerFunc(filterByLevel))
+	r.Get("/logs/category/:category", http.HandlerFunc(filterByCategory))
+	r.Get("/logs/userid/:userid", http.HandlerFunc(filterByUserId))
 	http.Handle("/", r)
 
 	log.Print(" Running on 3000")
@@ -36,7 +37,7 @@ func main() {
 	}
 }
 
-//estTable (Time,Level,Msg,Category,DebugId,Ip,RequestId,Type,Uri) values (?,?,?,?,?,?,?,?,?)
+//testTable (Time,Level,Msg,Category,DebugId,Ip,RequestId,Type,Uri) values (?,?,?,?,?,?,?,?,?)
 type Log struct {
 	ID        int64  `json:"id"`
 	Time      string `json:"time"`
@@ -48,6 +49,7 @@ type Log struct {
 	RequestId string `json:"RequestId"`
 	Type      string `json:"Type"`
 	Uri       string `json:"Uri"`
+	UserId    int32  `json:"UserId"`
 	//I created a struct with a struct to select the rows in the table and add data.
 }
 
@@ -66,7 +68,7 @@ func getAll(w http.ResponseWriter, r *http.Request) {
 	var logs Logs
 	for rows.Next() {
 		var log Log
-		err = rows.Scan(&log.ID, &log.Time, &log.Level, &log.Msg, &log.Category, &log.DebugId, &log.Ip, &log.RequestId, &log.Type, &log.Uri)
+		err = rows.Scan(&log.ID, &log.Time, &log.Level, &log.Msg, &log.Category, &log.DebugId, &log.Ip, &log.RequestId, &log.Type, &log.Uri, &log.UserId)
 		checkErr(err)
 		logs = append(logs, log)
 	}
@@ -78,13 +80,14 @@ func getAll(w http.ResponseWriter, r *http.Request) {
 func getByID(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	id := r.URL.Query().Get(":id")
+	fmt.Println("GetById----------------------------- " + id)
 	stmt, err := mainDB.Prepare(" SELECT * FROM testTable where id = ?")
 	checkErr(err)
 	rows, errQuery := stmt.Query(id)
 	checkErr(errQuery)
 	var log Log
 	for rows.Next() {
-		err = rows.Scan(&log.ID, &log.Time, &log.Level, &log.Msg, &log.Category, &log.DebugId, &log.Ip, &log.RequestId, &log.Type, &log.Uri)
+		err = rows.Scan(&log.ID, &log.Time, &log.Level, &log.Msg, &log.Category, &log.DebugId, &log.Ip, &log.RequestId, &log.Type, &log.Uri, &log.UserId)
 		checkErr(err)
 	}
 	jsonB, errMarshal := json.Marshal(log)
@@ -92,6 +95,8 @@ func getByID(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s", string(jsonB))
 }
 
+//We dont need this right now!
+/*
 func insert(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	time := r.FormValue("time")
@@ -126,6 +131,8 @@ func insert(w http.ResponseWriter, r *http.Request) {
 	checkErr(errMarshal)
 	fmt.Fprintf(w, "%s", string(jsonB))
 }
+
+
 
 func updateByID(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
@@ -167,6 +174,103 @@ func updateByID(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "{row_affected=%d}", rowAffected)
 	}
 
+}
+*/
+//delete
+
+//Filter: where by category, by from time & to time.
+// F,e. time >= {​​from time}​​ and time <={​​to time}​​
+//if there is no "to time", only time >= {​​from time}​​
+/*
+
+time >= {​​from time}​​ and time <={​​to time}​​
+if there is no "to time", only time >= {​​from time}​​
+
+Filter: by type or category
+level: info, error, warning
+category: system, permisssion, dtabase
+
+*/
+
+// Filters all data by Level f.e. by info, error etc.
+
+func filterByLevel(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Filter_By_Level ---------------------------")
+	enableCors(&w)
+	level := r.URL.Query().Get(":level")
+	fmt.Println("Level filter : " + level)
+	stmt, err := mainDB.Prepare(
+		`SELECT * FROM testTable where level = ?`)
+	checkErr(err)
+	rows, errQuery := stmt.Query(level)
+	checkErr(errQuery)
+	var logs Logs
+
+	for rows.Next() {
+		var log Log
+		err = rows.Scan(&log.ID, &log.Time, &log.Level, &log.Msg, &log.Category, &log.DebugId, &log.Ip, &log.RequestId, &log.Type, &log.Uri, &log.UserId)
+
+		checkErr(err)
+		logs = append(logs, log)
+	}
+
+	jsonB, errMarshal := json.Marshal(logs)
+	checkErr(errMarshal)
+	fmt.Fprintf(w, "%s", string(jsonB))
+}
+
+// Filters all data by Category
+
+func filterByCategory(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Filter_By_Category ---------------------------")
+	enableCors(&w)
+	category := r.URL.Query().Get(":category")
+	fmt.Println("Category filter : " + category)
+	stmt, err := mainDB.Prepare(
+		`SELECT * FROM testTable where category = ?`)
+	checkErr(err)
+	rows, errQuery := stmt.Query(category)
+	checkErr(errQuery)
+	var logs Logs
+
+	for rows.Next() {
+		var log Log
+		err = rows.Scan(&log.ID, &log.Time, &log.Level, &log.Msg, &log.Category, &log.DebugId, &log.Ip, &log.RequestId, &log.Type, &log.Uri, &log.UserId)
+
+		checkErr(err)
+		logs = append(logs, log)
+	}
+
+	jsonB, errMarshal := json.Marshal(logs)
+	checkErr(errMarshal)
+	fmt.Fprintf(w, "%s", string(jsonB))
+}
+
+// Filters all data by UserId f.e. user id = 0 , 1 ,2 .. int32
+
+func filterByUserId(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Filter_By_UserId ---------------------------")
+	enableCors(&w)
+	userid := r.URL.Query().Get(":userid")
+	fmt.Println("Category filter : " + userid)
+	stmt, err := mainDB.Prepare(
+		`SELECT * FROM testTable where userid = ?`)
+	checkErr(err)
+	rows, errQuery := stmt.Query(userid)
+	checkErr(errQuery)
+	var logs Logs
+
+	for rows.Next() {
+		var log Log
+		err = rows.Scan(&log.ID, &log.Time, &log.Level, &log.Msg, &log.Category, &log.DebugId, &log.Ip, &log.RequestId, &log.Type, &log.Uri, &log.UserId)
+
+		checkErr(err)
+		logs = append(logs, log)
+	}
+
+	jsonB, errMarshal := json.Marshal(logs)
+	checkErr(errMarshal)
+	fmt.Fprintf(w, "%s", string(jsonB))
 }
 
 func deleteByID(w http.ResponseWriter, r *http.Request) {

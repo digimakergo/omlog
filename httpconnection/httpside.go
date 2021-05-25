@@ -16,6 +16,7 @@ import (
 func main() {
 
 	db, errOpenDB := sql.Open("sqlite3", "./godb.db")
+
 	checkErr(errOpenDB)
 	mainDB = db
 
@@ -30,9 +31,10 @@ func main() {
 	r.Get("/logs/userid/:userid", http.HandlerFunc(filterByUserId))
 	http.Handle("/", r)
 
-	log.Print(" Running on 3000")
 	err := http.ListenAndServe(":3000", nil)
-	if err != nil {
+	if err == nil {
+		log.Print(" Running on 3000")
+	} else {
 		log.Fatal("ListenAndServe: ", err)
 	}
 }
@@ -50,7 +52,7 @@ type Log struct {
 	Type      string `json:"Type"`
 	Uri       string `json:"Uri"`
 	UserId    int32  `json:"UserId"`
-	//I created a struct with a struct to select the rows in the table and add data.
+	// a struct with a struct to select the rows in the table and add data.
 }
 
 type Logs []Log
@@ -61,6 +63,7 @@ func enableCors(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
 }
 
+//Reads all log data from DB
 func getAll(w http.ResponseWriter, r *http.Request) {
 	enableCors(&w)
 	rows, err := mainDB.Query("SELECT * FROM testTable")

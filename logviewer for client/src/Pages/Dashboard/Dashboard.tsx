@@ -26,8 +26,8 @@ import { CgCloseO } from "react-icons/cg";
 import { useData } from "../../Utils";
 
 //WebSocket
-const SOCKET_SERVER = "ws://localhost:6001/ws/debug-logs";
-//const SOCKET_SERVER = "ws://91.192.221.250:6001/ws/debug-logs";
+//const SOCKET_SERVER = "ws://localhost:6001/ws/debug-logs";
+const SOCKET_SERVER = "ws://91.192.221.250:6001/ws/debug-logs";
 
 type LiveData = {
   Category: string;

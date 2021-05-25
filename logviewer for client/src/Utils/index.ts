@@ -16,8 +16,8 @@ export type Data = {
 }[];
 
 export const useData = () => {
-  const ENDPOINT = "http://localhost:3000/logs";
-  //const ENDPOINT = "http://91.192.221.250:3000/logs";
+  //const ENDPOINT = "http://localhost:3000/logs";
+  const ENDPOINT = "http://91.192.221.250:3000/logs";
   const [data, setData] = useState<Data>([]);
   const [page, setPage] = useState(1);
 

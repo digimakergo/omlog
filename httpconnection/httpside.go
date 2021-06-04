@@ -21,7 +21,7 @@ func main() {
 	mainDB = db
 
 	r := pat.New()
-	//r.Del("/logs/:id", http.HandlerFunc(deleteByID))
+	r.Del("/logs/:id", http.HandlerFunc(deleteByID))
 	r.Get("/logs/:id", http.HandlerFunc(getByID))
 	//r.Put("/logs/:id", http.HandlerFunc(updateByID))
 	r.Get("/logs", http.HandlerFunc(getAll))
@@ -31,9 +31,9 @@ func main() {
 	r.Get("/logs/userid/:userid", http.HandlerFunc(filterByUserId))
 	http.Handle("/", r)
 
-	err := http.ListenAndServe(":3000", nil)
+	err := http.ListenAndServe(":3001", nil)
 	if err == nil {
-		log.Print(" Running on 3000")
+		log.Print(" Running on 3001")
 	} else {
 		log.Fatal("ListenAndServe: ", err)
 	}
